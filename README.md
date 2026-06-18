@@ -41,7 +41,7 @@ QUANT CLI — локальный AI-агент для работы с кодом
 ### Установка
 
 ```bash
-pip install quant-cli
+pip install quant-cli-agent
 quant
 ```
 
@@ -93,7 +93,7 @@ QUANT CLI is a local AI coding agent for the terminal. 100% private — your dat
 ### Install
 
 ```bash
-pip install quant-cli
+pip install quant-cli-agent
 quant
 ```
 
