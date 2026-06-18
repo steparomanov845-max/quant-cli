@@ -1,3 +1,8 @@
+<img width="1920" height="980" alt="gui" src="https://github.com/user-attachments/assets/51d113d4-a322-44e1-855c-276ece70b215" />
+
+
+
+
 # QUANT CLI 3.0 ❤️
 
 ```
