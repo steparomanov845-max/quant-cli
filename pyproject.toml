@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-cli"
+version = "3.0.0"
+description = "QUANT CLI 3.0 — Local AI Coding Agent with streaming, 12 tools, 6 modes"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "QUANT Team"},
+]
+keywords = ["ai", "coding", "agent", "local", "llm", "lmstudio", "ollama"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+
+dependencies = [
+    "rich>=13.7",
+    "prompt_toolkit>=3.0",
+    "httpx>=0.27",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+    "psutil>=5.9",
+    "typer>=0.12",
+    "duckduckgo-search>=8.0",
+    "textual>=0.40",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+quant = "quant.main:app"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/quant-cli"
+Repository = "https://github.com/yourusername/quant-cli"
+Issues = "https://github.com/yourusername/quant-cli/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["quant*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
