@@ -4,11 +4,11 @@ import asyncio
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, Container
-from textual.widgets import Static, Header, Footer, Input, RichLog, Label, Button, RadioSet
-from textual.widgets._radio_button import RadioButton
+from textual.widgets import Static, Header, Footer, Input, RichLog, Label, Button, TextArea
 from textual.reactive import reactive
 from textual import work
 from textual.binding import Binding
+from textual.message import Message
 from textual.timer import Timer
 from rich.text import Text
 from rich.panel import Panel
@@ -303,36 +303,61 @@ class ChatLog(RichLog):
 
 
 class ConfirmBar(Vertical):
-    """Inline confirmation bar with selectable options."""
+    """Inline confirmation bar with buttons. Resets state on each show()."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._visible = False
 
     def compose(self) -> ComposeResult:
-        yield RadioSet(
-            RadioButton("Yes (Approve)", id="yes"),
-            RadioButton("No (Deny)", id="no"),
-            RadioButton("Always Allow (session)", id="always"),
-            id="confirm-options",
-        )
-        yield Static("  ↑↓ navigate  •  Enter select", id="confirm-hint")
+        with Horizontal(id="confirm-buttons"):
+            yield Button("✔ Yes", id="confirm-yes", variant="success")
+            yield Button("✘ No",  id="confirm-no",  variant="error")
+            yield Button("∞ Always Allow", id="confirm-always", variant="warning")
+        yield Static("  Click or press Y / N", id="confirm-hint")
 
     def show(self):
         self._visible = True
         self.styles.display = "block"
-        rs = self.query_one("#confirm-options", RadioSet)
+        # Reset button states so they look fresh every time
         try:
-            rs._selected = -1
-            rs._pressed = -1
-        except AttributeError:
+            for btn in self.query(Button):
+                btn.disabled = False
+                btn.remove_class("-active")
+        except Exception:
             pass
-        rs.refresh()
-        rs.focus()
+        try:
+            self.query_one("#confirm-yes", Button).focus()
+        except Exception:
+            pass
+            pass
 
     def hide(self):
         self._visible = False
         self.styles.display = "none"
+
+
+
+class QuantInput(TextArea):
+    """TextArea where Enter sends, Shift+Enter inserts newline."""
+
+    def _on_key(self, event) -> None:
+        if event.key == "enter":
+            event.prevent_default()
+            event.stop()
+            # Bubble up a custom message to QuantTUI
+            self.post_message(self.QuantSubmit(self))
+        elif event.key == "shift+enter":
+            event.prevent_default()
+            event.stop()
+            self.insert("\n")
+        else:
+            super()._on_key(event)
+
+    class QuantSubmit(Message):
+        def __init__(self, text_area: "QuantInput") -> None:
+            super().__init__()
+            self.text_area = text_area
 
 
 class QuantTUI(App):
@@ -371,7 +396,9 @@ class QuantTUI(App):
         overflow-x: hidden;
     }
     #input-container {
-        height: 3;
+        height: auto;
+        min-height: 3;
+        max-height: 8;
         background: #0d0117;
         border: solid #6e40c9;
         margin: 0 1 0 1;
@@ -386,8 +413,18 @@ class QuantTUI(App):
         background: #0d0117;
         color: #dce8ff;
         border: none;
-        padding: 0 1 0 0;
+        padding: 0 0 0 0;
         width: 1fr;
+        height: auto;
+        max-height: 6;
+        min-height: 1;
+    }
+    TextArea .text-area--cursor {
+        background: #bd93f9;
+        color: #0f0a19;
+    }
+    TextArea .text-area--selection {
+        background: #44475a;
     }
     #status-bar {
         height: 1;
@@ -403,22 +440,22 @@ class QuantTUI(App):
         display: none;
         margin: 0 1 0 1;
     }
-    #confirm-options {
-        background: #1a0a2e;
-        border: none;
+    #confirm-buttons {
         height: auto;
-        max-height: 5;
+        background: transparent;
+        padding: 0 1;
     }
-    #confirm-options RadioButton {
-        background: #1a0a2e;
-        color: #dce8ff;
+    #confirm-yes {
+        margin: 0 1 0 0;
+        min-width: 10;
     }
-    #confirm-options RadioButton:hover {
-        background: #2a1a3e;
+    #confirm-no {
+        margin: 0 1 0 0;
+        min-width: 10;
     }
-    #confirm-options RadioButton.-active {
-        background: #ff6400;
-        color: #0d0117;
+    #confirm-always {
+        margin: 0 1 0 0;
+        min-width: 18;
     }
     #confirm-hint {
         height: 1;
@@ -471,12 +508,12 @@ class QuantTUI(App):
                 yield ConfirmBar(id="confirm-bar")
                 with Horizontal(id="input-container"):
                     yield Static("  ▲ QUANT ➔", id="prompt-label")
-                    yield Input(placeholder="Type a message or /help...", id="user-input")
+                    yield QuantInput(id="user-input", language=None)
         yield StatusBar(id="status-bar")
 
     def on_mount(self):
         self._mounted = True
-        self.query_one("#user-input", Input).focus()
+        self.query_one("#user-input", QuantInput).focus()
         self.set_interval(3.0, self._update_system_stats)
         if self._on_ready_callback:
             self._on_ready_callback()
@@ -495,7 +532,7 @@ class QuantTUI(App):
 
     def action_toggle_focus(self):
         log = self.query_one("#chat-log", ChatLog)
-        inp = self.query_one("#user-input", Input)
+        inp = self.query_one("#user-input", QuantInput)
         if log.has_focus:
             inp.focus()
         else:
@@ -527,8 +564,8 @@ class QuantTUI(App):
                 )
                 text = result.stdout.strip()
             if text:
-                inp = self.query_one("#user-input", Input)
-                inp.value = text
+                inp = self.query_one("#user-input", QuantInput)
+                inp.insert(text)
         except Exception:
             pass
 
@@ -548,8 +585,8 @@ class QuantTUI(App):
         except Exception:
             pass
 
-    def on_input_changed(self, event: Input.Changed):
-        value = event.value
+    def on_text_area_changed(self, event: TextArea.Changed):
+        value = event.text_area.text
         if value.startswith("/"):
             from quant.ui.help import COMMANDS_LIST
             matches = [c for c in COMMANDS_LIST if c.startswith(value)]
@@ -561,9 +598,16 @@ class QuantTUI(App):
         else:
             self.set_status("Ready")
 
-    def on_input_submitted(self, event: Input.Submitted):
-        value = event.value.strip()
-        event.input.value = ""
+    def on_quant_input_quant_submit(self, event) -> None:
+        self._submit_textarea()
+
+    def _submit_textarea(self):
+        try:
+            ta = self.query_one("#user-input", QuantInput)
+        except Exception:
+            return
+        value = ta.text.strip()
+        ta.clear()
         if not value:
             return
 
@@ -584,18 +628,23 @@ class QuantTUI(App):
         if self._on_submit_callback:
             self._current_task = asyncio.ensure_future(self._on_submit_callback(value))
 
-    def on_radio_set_changed(self, event: RadioSet.Changed):
+    def on_button_pressed(self, event: Button.Pressed) -> None:
         global _CONFIRM_RESULT, _CONFIRM_ALWAYS, _CONFIRM_FUT
+        btn_id = event.button.id
+
+        if btn_id not in ("confirm-yes", "confirm-no", "confirm-always"):
+            return
         if not _CONFIRM_FUT or _CONFIRM_FUT.done():
             return
 
-        option_id = event.pressed.id
-
-        if option_id == "yes":
+        if btn_id == "confirm-yes":
+            option_id = "yes"
             _CONFIRM_RESULT = True
-        elif option_id == "no":
+        elif btn_id == "confirm-no":
+            option_id = "no"
             _CONFIRM_RESULT = False
-        elif option_id == "always":
+        else:
+            option_id = "always"
             _CONFIRM_ALWAYS = True
             _CONFIRM_RESULT = True
 
@@ -610,7 +659,10 @@ class QuantTUI(App):
 
         bar = self.query_one("#confirm-bar", ConfirmBar)
         bar.hide()
-        self.query_one("#user-input", Input).focus()
+        try:
+            self.query_one("#user-input", QuantInput).focus()
+        except Exception:
+            pass
 
         if not _CONFIRM_FUT.done():
             _CONFIRM_FUT.set_result(_CONFIRM_RESULT)

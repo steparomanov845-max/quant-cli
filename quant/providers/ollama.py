@@ -52,7 +52,17 @@ class OllamaProvider(BaseProvider):
         if system:
             ollama_msgs.append({"role": "system", "content": system})
         for m in messages:
-            ollama_msgs.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+            role = m.get("role", "user")
+            msg_content = m.get("content") or ""
+            # Ollama doesn't support tool role - convert to user message with context
+            if role == "tool":
+                ollama_msgs.append({"role": "user", "content": f"[Tool result]: {msg_content}"})
+            elif role == "assistant" and m.get("tool_calls"):
+                # Skip pure tool-call assistant messages (no text content)
+                if msg_content:
+                    ollama_msgs.append({"role": "assistant", "content": msg_content})
+            else:
+                ollama_msgs.append({"role": role, "content": msg_content})
 
         payload = {
             "model":    self.model,
@@ -127,7 +137,17 @@ class OllamaProvider(BaseProvider):
         if system:
             ollama_msgs.append({"role": "system", "content": system})
         for m in messages:
-            ollama_msgs.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+            role = m.get("role", "user")
+            msg_content = m.get("content") or ""
+            # Ollama doesn't support tool role - convert to user message with context
+            if role == "tool":
+                ollama_msgs.append({"role": "user", "content": f"[Tool result]: {msg_content}"})
+            elif role == "assistant" and m.get("tool_calls"):
+                # Skip pure tool-call assistant messages (no text content)
+                if msg_content:
+                    ollama_msgs.append({"role": "assistant", "content": msg_content})
+            else:
+                ollama_msgs.append({"role": role, "content": msg_content})
 
         payload = {
             "model":    self.model,
@@ -155,7 +175,17 @@ class OllamaProvider(BaseProvider):
         if system:
             ollama_msgs.append({"role": "system", "content": system})
         for m in messages:
-            ollama_msgs.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+            role = m.get("role", "user")
+            msg_content = m.get("content") or ""
+            # Ollama doesn't support tool role - convert to user message with context
+            if role == "tool":
+                ollama_msgs.append({"role": "user", "content": f"[Tool result]: {msg_content}"})
+            elif role == "assistant" and m.get("tool_calls"):
+                # Skip pure tool-call assistant messages (no text content)
+                if msg_content:
+                    ollama_msgs.append({"role": "assistant", "content": msg_content})
+            else:
+                ollama_msgs.append({"role": role, "content": msg_content})
 
         payload = {
             "model":    self.model,
