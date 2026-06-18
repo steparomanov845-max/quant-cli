@@ -323,7 +323,7 @@ class ConfirmBar(Vertical):
         self.styles.display = "block"
         rs = self.query_one("#confirm-options", RadioSet)
         try:
-            rs._selected = set()
+            rs._selected = -1
             rs._pressed = -1
         except AttributeError:
             pass
